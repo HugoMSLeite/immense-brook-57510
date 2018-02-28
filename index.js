@@ -9,6 +9,10 @@ const
 // Sets server port and logs message on success
 app.listen(process.env.PORT || 1337, () => console.log('webhook is listening'))
 
+app.get('/', (req, res) => {
+    res.status(200).send('Server Running')
+})
+
 // Creates the endpoint for our webhook 
 app.post('/webhook', (req, res) => {
 
@@ -60,7 +64,7 @@ app.get('/webhook', (req, res) => {
 
         } else {
             // Responds with '403 Forbidden' if verify tokens do not match
-            res.sendStatus(200)
+            res.sendStatus(200).send('sucesso')
         }
     }
 })
