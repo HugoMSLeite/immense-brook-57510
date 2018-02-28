@@ -6,6 +6,8 @@ const
     bodyParser = require('body-parser'),
     app = express().use(bodyParser.json()) // creates express http server
 
+const request = require('request')
+
 // Sets server port and logs message on success
 app.listen(process.env.PORT || 1337, () => console.log('webhook is listening'))
 
@@ -26,10 +28,18 @@ app.post('/webhook', (req, res) => {
             // Gets the message. entry.messaging is an array, but 
             // will only ever contain one message, so we get index 0
             let webhook_event = entry.messaging[0]
-            console.log(webhook_event)
-            console.log(webhook_event.message.nlp)
-            console.log(webhook_event.message.nlp.entities)
-            console.log(webhook_event.message.nlp.entities.location)
+
+            // Get the sender PSID
+            let sender_psid = webhook_event.sender.id
+            console.log('Sender PSID: ' + sender_psid)
+
+            // Check if the event is a message or postback and
+            // pass the event to the appropriate handler function
+            if (webhook_event.message) {
+                handleMessage(sender_psid, webhook_event.message)
+            } else if (webhook_event.postback) {
+                handlePostback(sender_psid, webhook_event.postback)
+            }
         })
 
         // Returns a '200 OK' response to all requests
@@ -68,3 +78,49 @@ app.get('/webhook', (req, res) => {
         }
     }
 })
+
+function handleMessage(sender_psid, received_message) {
+
+    let response;
+
+    // Check if the message contains text
+    if (received_message.text) {
+
+        // Create the payload for a basic text message
+        response = {
+            "text": `You sent the message: "${received_message.text}". Now send me an image!`
+        }
+    } else if (received_message.attachments) {
+
+        // Gets the URL of the message attachment
+        let attachment_url = received_message.attachments[0].payload.url;
+
+    }
+
+    // Sends the response message
+    callSendAPI(sender_psid, response);
+}
+
+function callSendAPI(sender_psid, response) {
+    // Construct the message body
+    let request_body = {
+        "recipient": {
+            "id": sender_psid
+        },
+        "message": response
+    }
+
+    // Send the HTTP request to the Messenger Platform
+    request({
+        "uri": "https://graph.facebook.com/v2.6/me/messages",
+        "qs": { "access_token": 'EAACgWBaTX5YBAGjTIX6kAwd3zCxDZBonCp8L94x0Us1ZBZBDdDldWvQhv3g2WsZCFuQ3uarcuifeX08mfy9ThMiat4Bp09bE7DDp7iOZBZARQ8LEO0jMxTkMwc7sswcQHUJgb8mwm4pZALwNyohLI6NBM4zY6FUJjWu0TxhZBUeMplRiErqkdZCdy' },
+        "method": "POST",
+        "json": request_body
+    }, (err, res, body) => {
+        if (!err) {
+            console.log('message sent!')
+        } else {
+            console.error("Unable to send message:" + err)
+        }
+    })
+}
