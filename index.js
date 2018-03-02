@@ -4,9 +4,12 @@
 const
     express = require('express'),
     bodyParser = require('body-parser'),
-    app = express().use(bodyParser.json()) // creates express http server
-
-const request = require('request')
+    app = express().use(bodyParser.json()), // creates express http server
+    request = require('request'),
+    handleMessage = require('./modules/handle-message'),
+    handlePostback = require('./modules/handle-post-back'),
+    components = require('./modules/components'),
+    PAGE_TOKEN = 'EAACgWBaTX5YBAGjTIX6kAwd3zCxDZBonCp8L94x0Us1ZBZBDdDldWvQhv3g2WsZCFuQ3uarcuifeX08mfy9ThMiat4Bp09bE7DDp7iOZBZARQ8LEO0jMxTkMwc7sswcQHUJgb8mwm4pZALwNyohLI6NBM4zY6FUJjWu0TxhZBUeMplRiErqkdZCdy'
 
 // Sets server port and logs message on success
 app.listen(process.env.PORT || 1337, () => console.log('webhook is listening'))
@@ -74,32 +77,10 @@ app.get('/webhook', (req, res) => {
 
         } else {
             // Responds with '403 Forbidden' if verify tokens do not match
-            res.sendStatus(200).send('sucesso')
+            res.sendStatus(403)
         }
     }
 })
-
-function handleMessage(sender_psid, received_message) {
-
-    let response;
-
-    // Check if the message contains text
-    if (received_message.text) {
-
-        // Create the payload for a basic text message
-        response = {
-            "text": `You sent the message: "${received_message.text}".`
-        }
-    } else if (received_message.attachments) {
-
-        // Gets the URL of the message attachment
-        let attachment_url = received_message.attachments[0].payload.url;
-
-    }
-
-    // Sends the response message
-    callSendAPI(sender_psid, response);
-}
 
 function callSendAPI(sender_psid, response) {
     // Construct the message body
@@ -113,7 +94,7 @@ function callSendAPI(sender_psid, response) {
     // Send the HTTP request to the Messenger Platform
     request({
         "uri": "https://graph.facebook.com/v2.6/me/messages",
-        "qs": { "access_token": 'EAACgWBaTX5YBAGjTIX6kAwd3zCxDZBonCp8L94x0Us1ZBZBDdDldWvQhv3g2WsZCFuQ3uarcuifeX08mfy9ThMiat4Bp09bE7DDp7iOZBZARQ8LEO0jMxTkMwc7sswcQHUJgb8mwm4pZALwNyohLI6NBM4zY6FUJjWu0TxhZBUeMplRiErqkdZCdy' },
+        "qs": { "access_token": PAGE_TOKEN },
         "method": "POST",
         "json": request_body
     }, (err, res, body) => {
