@@ -9,7 +9,7 @@ const
     handleMessage = require('./modules/handle-message'),
     handlePostback = require('./modules/handle-post-back'),
     components = require('./modules/components'),
-    PAGE_TOKEN = 'EAACgWBaTX5YBAGjTIX6kAwd3zCxDZBonCp8L94x0Us1ZBZBDdDldWvQhv3g2WsZCFuQ3uarcuifeX08mfy9ThMiat4Bp09bE7DDp7iOZBZARQ8LEO0jMxTkMwc7sswcQHUJgb8mwm4pZALwNyohLI6NBM4zY6FUJjWu0TxhZBUeMplRiErqkdZCdy'
+    PAGE_TOKEN = 'EAACgWBaTX5YBAC9vCZBbfy6eV2Oax0aZAZCgMUBmZCibYZAZBLMZBUBmRFHLwdJdA6cGe2WZCf7ZA76pQl421f5RBYLC6ZAuW4fmCymStFmcGR71ScZAp0SfzZBZB4aHaYvmgH87ZBUaGKzW43wNOZAZABa7LbiIq3ZAs9IIm1tqBjzUo7NBdZAOZCv6SeqK396'
 
 // Sets server port and logs message on success
 app.listen(process.env.PORT || 1337, () => console.log('webhook is listening'))
