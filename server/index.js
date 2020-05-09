@@ -5,7 +5,7 @@ var path = require('path');
  
 class Server {
  
- DEFAULT_PORT = 5000;
+ DEFAULT_PORT = 80;
  httpServer;
  app = express();
  io;
