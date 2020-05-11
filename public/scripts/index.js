@@ -126,12 +126,12 @@ socket.on("answer-made", async data => {
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(JSON.parse( data.answer))
   );
-  listCandidates.forEach(candidate) {
+  listCandidates.forEach(candidate => {
     socket.emit("send-candidate", {
       candidate: JSON.stringify(candidate),
       to: socketId
     });
-  }
+  });
 });
 
 socket.on("call-rejected", data => {
