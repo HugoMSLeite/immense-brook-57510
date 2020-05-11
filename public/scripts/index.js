@@ -52,7 +52,7 @@ async function callUser(socketId) {
 
   await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
   socket.emit("call-user", {
-    offer,
+    offer: JSON.stringify(offer),
     to: socketId
   });
 }
@@ -104,7 +104,7 @@ socket.on("call-made", async data => {
   }
   
   await peerConnection.setRemoteDescription(
-    new RTCSessionDescription(data.offer)
+    new RTCSessionDescription(JSON.parse(data.offer))
   );
   const answer = await peerConnection.createAnswer();
   peerConnection.onicecandidate = (e => {
@@ -117,7 +117,7 @@ socket.on("call-made", async data => {
   await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
 
   socket.emit("make-answer", {
-    answer,
+    answer: JSON.stringify(answer),
     to: data.socket
   });
   getCalled = true;
@@ -125,7 +125,7 @@ socket.on("call-made", async data => {
 
 socket.on("answer-made", async data => {
   await peerConnection.setRemoteDescription(
-    new RTCSessionDescription(data.answer)
+    new RTCSessionDescription(JSON.parse( data.answer))
   );
 });
 
