@@ -8,12 +8,12 @@ server.listen(port => {
 });
 
 
-var turnServer = new Turn({
-  authMech: 'none',
-  credentials: {
-    username: "eEscola",
-    password: "eEscola"
-  },
-  listeningPort: process.env.PORT || 8080
-});
-turnServer.start();
+// var turnServer = new Turn({
+//   authMech: 'none',
+//   credentials: {
+//     username: "eEscola",
+//     password: "eEscola"
+//   },
+//   listeningPort: process.env.PORT || 8080
+// });
+// turnServer.start();

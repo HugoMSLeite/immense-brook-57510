@@ -3,9 +3,13 @@ let getCalled = false;
 
 const existingCalls = [];
 
-const { RTCPeerConnection, RTCSessionDescription } = window;
+const {
+  RTCPeerConnection,
+  RTCSessionDescription
+} = window;
 
-const peerConnection = new RTCPeerConnection();
+var peerConnection = new RTCPeerConnection();
+peerConnection.iceServers = [];
 
 function unselectUsersFromList() {
   const alreadySelectedUser = document.querySelectorAll(
@@ -41,20 +45,27 @@ function createUserItemContainer(socketId) {
 }
 
 async function callUser(socketId) {
-  const offer = await peerConnection.createOffer();
-  peerConnection.onicecandidate = (e => {
-    if(e && e.candidate)
-    socket.emit("send-candidate", {
-        candidate: e.candidate,
-        to: socketId
-      });
-    });
-  await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
 
-  socket.emit("call-user", {
-    offer,
-    to: socketId
+  socket.on('token', async token => {
+    peerConnection.iceServers.push(token.iceServers);
+
+    const offer = await peerConnection.createOffer();
+    
+    peerConnection.onicecandidate = (e => {
+      if (e && e.candidate)
+        socket.emit("send-candidate", {
+          candidate: JSON.stringify(e.candidate),
+          to: socketId
+        });
+    });
+    await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
+    socket.emit("call-user", {
+      offer,
+      to: socketId
+    });
+    peerConnection.onsignalingstatechange = ev => console.log(ev);
   });
+  socket.emit('token');
 }
 
 function updateUserList(socketIds) {
@@ -70,13 +81,17 @@ function updateUserList(socketIds) {
   });
 }
 
-const socket = io.connect("http://localhost:5000");
+const socket = io.connect(window.location.origin);
 
-socket.on("update-user-list", ({ users }) => {
+socket.on("update-user-list", ({
+  users
+}) => {
   updateUserList(users);
 });
 
-socket.on("remove-user", ({ socketId }) => {
+socket.on("remove-user", ({
+  socketId
+}) => {
   const elToRemove = document.getElementById(socketId);
 
   if (elToRemove) {
@@ -85,7 +100,7 @@ socket.on("remove-user", ({ socketId }) => {
 });
 
 socket.on("call-made", async data => {
-  if (getCalled) {
+  if (!getCalled) {
     const confirmed = confirm(
       `User "Socket: ${data.socket}" wants to call you. Do accept this call?`
     );
@@ -98,18 +113,19 @@ socket.on("call-made", async data => {
       return;
     }
   }
-
+  peerConnection.onsignalingstatechange = ev => console.log(ev);
+  
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(data.offer)
   );
   const answer = await peerConnection.createAnswer();
   peerConnection.onicecandidate = (e => {
-    if(e && e.candidate)
-    socket.emit("send-candidate", {
-        candidate: e.candidate,
+    if (e && e.candidate)
+      socket.emit("send-candidate", {
+        candidate: JSON.stringify(e.candidate),
         to: data.socket
       });
-    });
+  });
   await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
 
   socket.emit("make-answer", {
@@ -123,11 +139,6 @@ socket.on("answer-made", async data => {
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(data.answer)
   );
-
-  if (!isAlreadyCalling) {
-    callUser(data.socket);
-    isAlreadyCalling = true;
-  }
 });
 
 socket.on("call-rejected", data => {
@@ -136,10 +147,12 @@ socket.on("call-rejected", data => {
 });
 
 socket.on("candidate-made", async data => {
-    console.log(data);
-    if(data.candidate)
-        peerConnection.addIceCandidate(data.candidate).catch(e => console.error(e));
-  });
+  console.log(data);
+  if (typeof(peerConnection) != 'undefined' && data.candidate) {
+    var rtcCandidate = new RTCIceCandidate(JSON.parse(data.candidate));
+    peerConnection.addIceCandidate(rtcCandidate).catch(e => console.error(e));
+  }
+});
 
 peerConnection.ontrack = function({ streams: [stream] }) {
   const remoteVideo = document.getElementById("remote-video");
@@ -148,15 +161,17 @@ peerConnection.ontrack = function({ streams: [stream] }) {
   }
 };
 
-navigator.getUserMedia(
-  { video: true, audio: true },
+navigator.getUserMedia({
+    video: true,
+    audio: true
+  },
   stream => {
     const localVideo = document.getElementById("local-video");
     if (localVideo) {
       localVideo.srcObject = stream;
     }
-
-    stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+    window.localStream = stream;
+    window.localStream.getTracks().forEach(track => peerConnection.addTrack(track, window.localStream));
   },
   error => {
     console.warn(error.message);

@@ -2,6 +2,11 @@ var express = require('express');
 var http = require('http');
 var io = require('socket.io');
 var path = require('path');
+
+var twilio = require('twilio')(
+  'ACdf255335cf14e64751dfb64ac8fc9f1e',
+  '421357628985926aec97c7518345525a'
+);
  
 class Server {
  
@@ -84,6 +89,16 @@ class Server {
           );
           socket.broadcast.emit("remove-user", {
             socketId: socket.id
+          });
+        });
+
+        socket.on('token', function(){
+          twilio.tokens.create(function(err, response){
+            if(err){
+              console.log(err);
+            }else{
+              socket.emit('token', response);
+            }
           });
         });
       });
