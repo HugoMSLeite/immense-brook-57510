@@ -39,15 +39,6 @@ function createUserItemContainer(socketId) {
 }
 
 async function callUser(socketId) {
-
-  peerConnection.onicecandidate = (e => {
-    if (e && e.candidate)
-      socket.emit("send-candidate", {
-        candidate: JSON.stringify(e.candidate),
-        to: socketId
-      });
-  });
-
   peerConnection.createOffer().then(offer => {
     peerConnection.setLocalDescription(new RTCSessionDescription(offer)).then(() => {
       socket.emit("call-user", {
@@ -127,6 +118,13 @@ socket.on("call-made", async data => {
 });
 
 socket.on("answer-made", async data => {
+  peerConnection.onicecandidate = (e => {
+    if (e && e.candidate)
+      socket.emit("send-candidate", {
+        candidate: JSON.stringify(e.candidate),
+        to: socketId
+      });
+  });
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(JSON.parse( data.answer))
   );
