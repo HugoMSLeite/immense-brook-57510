@@ -48,12 +48,13 @@ async function callUser(socketId) {
       });
   });
 
-  const offer = await peerConnection.createOffer();
-
-  await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
-  socket.emit("call-user", {
-    offer: JSON.stringify(offer),
-    to: socketId
+  peerConnection.createOffer().then(offer => {
+    peerConnection.setLocalDescription(new RTCSessionDescription(offer)).then(() => {
+      socket.emit("call-user", {
+        offer: JSON.stringify(peerConnection.localDescription),
+        to: socketId
+      });
+    });
   });
 }
 
@@ -106,7 +107,14 @@ socket.on("call-made", async data => {
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(JSON.parse(data.offer))
   );
-  const answer = await peerConnection.createAnswer();
+  peerConnection.createAnswer().then(answer => {
+    peerConnection.setLocalDescription(new RTCSessionDescription(answer)).then(() => {
+      socket.emit("make-answer", {
+        answer: JSON.stringify(peerConnection.localDescription),
+        to: data.socket
+      });
+    });
+  });
   peerConnection.onicecandidate = (e => {
     if (e && e.candidate)
       socket.emit("send-candidate", {
@@ -114,12 +122,7 @@ socket.on("call-made", async data => {
         to: data.socket
       });
   });
-  await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
-
-  socket.emit("make-answer", {
-    answer: JSON.stringify(answer),
-    to: data.socket
-  });
+  
   getCalled = true;
 });
 
