@@ -117,6 +117,7 @@ socket.on("call-made", async data => {
         candidate: JSON.stringify(e.candidate),
         to: data.socket
       });
+      console.log(e.candidate);
   });
   
   getCalled = true;
