@@ -3,13 +3,7 @@ let getCalled = false;
 
 const existingCalls = [];
 
-const {
-  RTCPeerConnection,
-  RTCSessionDescription
-} = window;
-
-var peerConnection = new RTCPeerConnection();
-peerConnection.iceServers = [];
+var peerConnection;
 
 function unselectUsersFromList() {
   const alreadySelectedUser = document.querySelectorAll(
@@ -46,26 +40,21 @@ function createUserItemContainer(socketId) {
 
 async function callUser(socketId) {
 
-  socket.on('token', async token => {
-    peerConnection.iceServers = token.iceServers;
-
-    const offer = await peerConnection.createOffer();
-    
-    peerConnection.onicecandidate = (e => {
-      if (e && e.candidate)
-        socket.emit("send-candidate", {
-          candidate: JSON.stringify(e.candidate),
-          to: socketId
-        });
-    });
-    await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
-    socket.emit("call-user", {
-      offer,
-      to: socketId
-    });
-    peerConnection.onsignalingstatechange = ev => console.log(ev);
+  peerConnection.onicecandidate = (e => {
+    if (e && e.candidate)
+      socket.emit("send-candidate", {
+        candidate: JSON.stringify(e.candidate),
+        to: socketId
+      });
   });
-  socket.emit('token');
+
+  const offer = await peerConnection.createOffer();
+
+  await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
+  socket.emit("call-user", {
+    offer,
+    to: socketId
+  });
 }
 
 function updateUserList(socketIds) {
@@ -113,7 +102,6 @@ socket.on("call-made", async data => {
       return;
     }
   }
-  peerConnection.onsignalingstatechange = ev => console.log(ev);
   
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(data.offer)
@@ -154,26 +142,32 @@ socket.on("candidate-made", async data => {
   }
 });
 
-peerConnection.ontrack = function({ streams: [stream] }) {
-  const remoteVideo = document.getElementById("remote-video");
-  if (remoteVideo) {
-    remoteVideo.srcObject = stream;
-  }
-};
+socket.on('token', async token => {
+  peerConnection = new RTCPeerConnection();
 
-navigator.getUserMedia({
-    video: true,
-    audio: true
-  },
-  stream => {
-    const localVideo = document.getElementById("local-video");
-    if (localVideo) {
-      localVideo.srcObject = stream;
+  peerConnection.ontrack = function({ streams: [stream] }) {
+    const remoteVideo = document.getElementById("remote-video");
+    if (remoteVideo) {
+      remoteVideo.srcObject = stream;
     }
-    window.localStream = stream;
-    window.localStream.getTracks().forEach(track => peerConnection.addTrack(track, window.localStream));
-  },
-  error => {
-    console.warn(error.message);
-  }
-);
+  };
+  
+  navigator.getUserMedia({
+      video: true,
+      audio: true
+    },
+    stream => {
+      const localVideo = document.getElementById("local-video");
+      if (localVideo) {
+        localVideo.srcObject = stream;
+      }
+      
+      stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+    },
+    error => {
+      console.warn(error.message);
+    }
+  );
+  peerConnection.onsignalingstatechange = ev => console.log(ev);
+});
+socket.emit('token');
