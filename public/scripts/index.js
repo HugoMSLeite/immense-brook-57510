@@ -47,6 +47,13 @@ async function callUser(socketId) {
       });
     });
   });
+  peerConnection.onicecandidate = (e => {
+    if (e && e.candidate)
+      socket.emit("send-candidate", {
+        candidate: JSON.stringify(e.candidate),
+        to: socketId
+      });
+  });
 }
 
 function updateUserList(socketIds) {
@@ -118,13 +125,6 @@ socket.on("call-made", async data => {
 });
 
 socket.on("answer-made", async data => {
-  peerConnection.onicecandidate = (e => {
-    if (e && e.candidate)
-      socket.emit("send-candidate", {
-        candidate: JSON.stringify(e.candidate),
-        to: socketId
-      });
-  });
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(JSON.parse( data.answer))
   );
@@ -136,8 +136,8 @@ socket.on("call-rejected", data => {
 });
 
 socket.on("candidate-made", async data => {
-  console.log(data);
-  if (typeof(peerConnection) != 'undefined' && data.candidate) {
+  if (peerConnection.localDescription && data.candidate) {
+    console.log(data);
     var rtcCandidate = new RTCIceCandidate(JSON.parse(data.candidate));
     peerConnection.addIceCandidate(rtcCandidate).catch(e => console.error(e));
   }
