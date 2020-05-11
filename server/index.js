@@ -33,7 +33,16 @@ class Server {
  handleRoutes() {
     this.app.get("/", (req, res) => {
         res.sendFile("index.html");
-      }); 
+      });
+      this.app.get("/routes", (req, res) => {
+        twilio.tokens.create(function(err, response){
+          if(err){
+            console.log(err);
+          }else{
+            res.send(response);
+          }
+        });
+      });
  }
  
  handleSocketConnection() {

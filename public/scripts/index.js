@@ -47,7 +47,7 @@ function createUserItemContainer(socketId) {
 async function callUser(socketId) {
 
   socket.on('token', async token => {
-    peerConnection.iceServers.push(token.iceServers);
+    peerConnection.iceServers = token.iceServers;
 
     const offer = await peerConnection.createOffer();
     
