@@ -1,7 +1,7 @@
 let isAlreadyCalling = false;
 let getCalled = false;
 
-const existingCalls = [];
+const existingCalls = [], listCandidates = [];
 
 var peerConnection;
 
@@ -39,6 +39,10 @@ function createUserItemContainer(socketId) {
 }
 
 async function callUser(socketId) {
+  peerConnection.onicecandidate = (e => {
+    if (e && e.candidate)
+      listCandidates.push(e.candidate);
+  });
   peerConnection.createOffer().then(offer => {
     peerConnection.setLocalDescription(new RTCSessionDescription(offer)).then(() => {
       socket.emit("call-user", {
@@ -47,13 +51,7 @@ async function callUser(socketId) {
       });
     });
   });
-  peerConnection.onicecandidate = (e => {
-    if (e && e.candidate)
-      socket.emit("send-candidate", {
-        candidate: JSON.stringify(e.candidate),
-        to: socketId
-      });
-  });
+  
 }
 
 function updateUserList(socketIds) {
@@ -128,6 +126,12 @@ socket.on("answer-made", async data => {
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(JSON.parse( data.answer))
   );
+  listCandidates.forEach(candidate) {
+    socket.emit("send-candidate", {
+      candidate: JSON.stringify(candidate),
+      to: socketId
+    });
+  }
 });
 
 socket.on("call-rejected", data => {
