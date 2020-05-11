@@ -129,7 +129,7 @@ socket.on("answer-made", async data => {
   listCandidates.forEach(candidate => {
     socket.emit("send-candidate", {
       candidate: JSON.stringify(candidate),
-      to: socketId
+      to: data.socket
     });
   });
 });
