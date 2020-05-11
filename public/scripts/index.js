@@ -150,7 +150,9 @@ socket.on("candidate-made", async data => {
 });
 
 socket.on('token', async token => {
-  peerConnection = new RTCPeerConnection();
+  peerConnection = new RTCPeerConnection({
+    iceServers: token.iceServers
+  });
 
   peerConnection.ontrack = function({ streams: [stream] }) {
     const remoteVideo = document.getElementById("remote-video");
