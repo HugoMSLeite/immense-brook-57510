@@ -132,6 +132,7 @@ socket.on("answer-made", async data => {
       candidate: JSON.stringify(candidate),
       to: data.socket
     });
+    console.log(candidate);
   });
 });
 
