@@ -32,7 +32,7 @@ class Server {
  
  handleRoutes() {
     this.app.get("/", (req, res) => {
-        res.sendFile("../client/build/index.html");
+        res.sendFile("index.html");
       });
       this.app.get("/routes", (req, res) => {
         twilio.tokens.create(function(err, response){
@@ -120,7 +120,7 @@ class Server {
  }
 
  configureApp() {
-    this.app.use(express.static(path.join(__dirname, "../public")));
+    this.app.use(express.static(path.join(__dirname, "../client/build")));
   }
 }
 
