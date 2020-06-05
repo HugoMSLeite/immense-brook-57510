@@ -29,7 +29,7 @@ class Sala extends Component {
       }
 
       componentDidMount() {
-        var wsPath = window.location.protocol + "//" + window.location.hostname + ":8080";
+        var wsPath = window.location.protocol + "//" + window.location.hostname;
         this.socket = openSocket(wsPath);
         this.socket.on('connect', function(){});
         this.socket.on('disconnect', function(){});
