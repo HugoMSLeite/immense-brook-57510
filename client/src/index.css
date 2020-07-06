@@ -11,3 +11,11 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+html,
+body,
+#root,
+#root>div {
+  background-color: rgb(238, 238, 238);
+  height: 100%;
+}

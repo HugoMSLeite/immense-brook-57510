@@ -11,15 +11,14 @@ class RTCVideo extends PureComponent {
     // upon initial render
     if (mediaStream) video.srcObject = mediaStream;
   }
-  
+
   render() {
     const { mediaStream } = this.props;
     console.log('mediaStream: ', mediaStream);
 
     return (
       <video
-        className="rtc__video"
-        style={{width: '480px', backgroundColor: 'black'}}
+        style={{ width: '100%' }}
         autoPlay
         ref={mediaStream ? this.addMediaStream : null}
       >

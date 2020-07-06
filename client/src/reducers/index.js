@@ -1,5 +1,17 @@
-import { clickReducer } from './clickReducer';
-import { combineReducers } from 'redux';
-export const Reducers = combineReducers({
-  clickState: clickReducer
+import {
+  combineReducers
+} from 'redux';
+
+import {
+  authentication
+} from './authentication-reducer';
+import {
+  users
+} from './users-reducer';
+
+const rootReducer = combineReducers({
+  authentication,
+  users
 });
+
+export default rootReducer;
