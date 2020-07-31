@@ -1,10 +1,9 @@
-import React from 'react';
-import { Route, Redirect } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Route, Redirect, Link } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
-import Button from '@material-ui/core/Button';
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -27,6 +26,8 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 export const PrivateRoute = ({ component: Component, ...rest }) => {
+    useEffect(() => { }, [])
+
     const classes = useStyles();
     let user = JSON.parse(localStorage.getItem('user'))
     return (
@@ -36,7 +37,7 @@ export const PrivateRoute = ({ component: Component, ...rest }) => {
                     <Typography variant="h6" className={classes.title}>
                         Demonstração
                         </Typography>
-                    <Button color="inherit">Logout</Button>
+                    <Link to="/account/login" style={{ textDecoration: 'none', color: '#fff' }}>Logout</Link>
                 </Toolbar>
             </AppBar>
             <Route {...rest} render={props => (

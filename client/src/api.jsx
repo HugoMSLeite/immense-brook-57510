@@ -6,7 +6,7 @@ const api = axios.create({
 });
 
 function Websocket(props, socket) {
-    const {
+    let {
         handleOffer,
         handleAnswer,
         handleIceCandidate,
@@ -67,7 +67,6 @@ function Websocket(props, socket) {
     }
 
     function enterRoom(sala) {
-        console.log('enter-room')
         socket.emit('enter-room', sala)
     }
 
@@ -83,6 +82,10 @@ function Websocket(props, socket) {
         return socket.id;
     }
 
+    function removeRoom(salaId) {
+        socket.emit('remove-room', salaId)
+    }
+
     return {
         listarSalas,
         createRoom,
@@ -91,7 +94,8 @@ function Websocket(props, socket) {
         enterRoom,
         sendOffer,
         sendAnswer,
-        id: getId
+        id: getId,
+        removeRoom
     }
 }
 

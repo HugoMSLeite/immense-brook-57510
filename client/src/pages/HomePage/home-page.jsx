@@ -36,21 +36,30 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-let socket;
-
 function HomePage(props) {
     const history = useHistory();
-    const ws = Websocket({ handleUpdateRoomList: handleUpdateRoomList }, socket)
+
+    const [user, setUser] = useState(null);
+    const [socket, setSocket] = useState(null);
+    const [ws, setWs] = useState(null);
+
+    useEffect(() => {
+        api.defaults.headers.Authorization = `Bearer ${props.user.token}`;
+        api.defaults.headers.TokenId = props.user.id;
+    }, []);
+
+    useEffect(() => {
+        if (ws)
+            ws.listarSalas();
+    }, [ws]);
 
     useEffect(() => {
         setUser(props.user);
-        ws.listarSalas()
-    }, [])
+        setWs(Websocket({ handleUpdateRoomList: handleUpdateRoomList }, socket));
+        setSocket(socket);
+    }, [setUser, setWs, setSocket]);
 
-    const [user, setUser] = useState(null);
 
-    api.defaults.headers.Authorization = `Bearer ${props.user.token}`;
-    api.defaults.headers.TokenId = props.user.id;
 
     const [inputs, setInputs] = useState({
         roomName: null,
@@ -81,6 +90,10 @@ function HomePage(props) {
         }
     }
 
+    function handleRemoveRoom(room) {
+        ws.removeRoom(room.salaId)
+    }
+
     function generateItens() {
         return rooms.map((item, index) => {
             return (
@@ -101,7 +114,7 @@ function HomePage(props) {
                             <InputIcon />
                         </IconButton>
                         {item.createUser === user.user.id &&
-                            <IconButton edge="end" aria-label="delete">
+                            <IconButton onClick={() => handleRemoveRoom(item)} edge="end" aria-label="delete">
                                 <DeleteIcon />
                             </IconButton>
                         }

@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { api, Websocket } from '../../api';
+import React, { useState, useEffect, useRef } from 'react';
+import openSocket from 'socket.io-client';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
-import { Height } from '@material-ui/icons';
-import { Backdrop } from '@material-ui/core';
 import RTCVideo from './RTCVideo.js';
 import { DEFAULT_CONSTRAINTS } from './functions/constants'
 
@@ -24,97 +22,135 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-let socket;
+const wsPath = window.location.protocol + "//" + window.location.hostname + ':8080';
 
 function RoomPage(props) {
-    let [localMediaStream, setLocalMediaStream] = useState(null);
-    const [iceServices, setIceServices] = useState([]);
-    let [room, setRoom] = useState(null);
-    const [rtcPeerConnections, setRtcPeerConnections] = useState([]);
-    const [listCandidates, setListCandidates] = useState([]);
-
-    const ws = Websocket({
-        handleGetRoom: handleGetRoom,
-        handleUpdateRoomList: () => { },
-        handleIceServices: handleIceServices,
-        handleOffer: handleOffer,
-        handleAnswer: handleAnswer,
-        handleIceCandidate: handleIceCandidate
-    }, socket)
+    const webSocket = useRef(null);
+    const [stream, setStream] = useState();
+    const [, setUpdateState] = useState();
+    const iceServices = useRef([]);
+    const [room, setRoom] = useState();
+    const rtcPeerConnections = useRef([]);
+    const listCandidates = useRef([]);
+    const userVideo = useRef();
 
     useEffect(() => {
-        console.log(props.match.params.id)
-        ws.getRoom(props.match.params.id)
-        navigator.mediaDevices.getUserMedia(DEFAULT_CONSTRAINTS).then((stream) => {
-            localMediaStream = stream
-            setLocalMediaStream(stream)
+        navigator.mediaDevices.getUserMedia(DEFAULT_CONSTRAINTS).then((_stream) => {
+            setStream(_stream);
+            if (userVideo.current)
+                userVideo.current.srcObject = _stream;
+            webSocket.current.emit('ice-services');
         })
+        webSocket.current = openSocket(wsPath);
+        webSocket.current.on('connect', function () { });
+        webSocket.current.on('disconnect', function () { });
+
+        webSocket.current.on("call-made", data => {
+            handleOffer(data)
+        });
+
+        webSocket.current.on("answer-made", data => {
+            handleAnswer(data);
+        });
+
+        webSocket.current.on("candidate-made", data => {
+            handleIceCandidate(data);
+        });
+
+        webSocket.current.on('ice-services', function (data) {
+            handleIceServices(data.iceServers);
+        });
+
+        webSocket.current.on('return-room', data => {
+            handleReturnRoom(data)
+        });
+
     }, [])
 
-    function handleGetRoom(_room) {
-        room = _room;
-        setRoom(_room);
-        ws.enterRoom(_room)
-        ws.getIceServices()
+    let UserVideo;
+    if (stream) {
+        UserVideo = (
+            <video
+                style={{ width: '100%' }}
+                autoPlay
+                ref={userVideo}
+            ></video>
+        )
+    }
+
+    useEffect(() => {
+        if (room)
+            room.users.forEach(async (_user) => {
+                if (_user !== webSocket.current.id) {
+                    let peer = new RTCPeerConnection({
+                        iceServers: iceServices.current
+                    });
+                    stream.getTracks().forEach(track => peer.addTrack(track, stream));
+                    peer.onicecandidate = (e => {
+                        if (e && e.candidate) {
+                            listCandidates.current.push(e.candidate);
+                        }
+                    });
+                    const offer = await peer.createOffer();
+                    await peer.setLocalDescription(new RTCSessionDescription(offer));
+                    peer.ontrack = (({ streams: [stream] }) => {
+                        rtcPeerConnections.current[rtcPeerConnections.current.length - 1].stream = stream
+                    })
+                    webSocket.current.emit('call-user', { from: webSocket.current.id, to: _user, offer: JSON.stringify(offer) })
+                    rtcPeerConnections.current.push({ user: _user, connection: peer });
+                    setUpdateState((value) => !value);
+                }
+            })
+    }, [room])
+
+    var handleReturnRoom = (_room) => {
+        if (_room) {
+            setRoom(_room);
+        }
     }
 
     function handleIceServices(data) {
-        setIceServices(data);
-        room.users.map(_user => {
-            let peer = new RTCPeerConnection({
-                iceServers: data
-            });
-            localMediaStream.getTracks().forEach(track => peer.addTrack(track, localMediaStream));
-            peer.onicecandidate = (e => {
-                if (e && e.candidate) {
-                    listCandidates.push(e.candidate);
-                    setListCandidates(listCandidates);
-                }
-            });
-            peer.createOffer().then(offer => {
-                peer.setLocalDescription(new RTCSessionDescription(offer)).then(() => {
-                    ws.sendOffer({ from: ws.id(), to: _user, offer: JSON.stringify(offer) })
-                    rtcPeerConnections.push({ user: _user, connection: peer });
-                    setRtcPeerConnections(rtcPeerConnections)
-                });
-            });
-        })
+        iceServices.current = data
+        webSocket.current.emit('enter-room', props.match.params.id)
     }
 
     async function handleOffer(data) {
         let rtcPeer = {};
         rtcPeer.user = data.from;
         rtcPeer.connection = new RTCPeerConnection({
-            iceServers: iceServices
+            iceServers: iceServices.current
         });
-        rtcPeer.connection.ontrack(({ streams: [stream] }) => {
+        rtcPeer.connection.ontrack = ({ streams: [stream] }) => {
             rtcPeer.stream = stream;
-        });
+        };
+        let stream = await navigator.mediaDevices.getUserMedia(DEFAULT_CONSTRAINTS);
+        stream.getTracks().forEach(track => rtcPeer.connection.addTrack(track, stream));
         await rtcPeer.connection.setRemoteDescription(
             new RTCSessionDescription(JSON.parse(data.offer))
         );
         const answer = await rtcPeer.connection.createAnswer();
-        ws.sendAnswer({ from: ws.id(), to: data.from, answer: JSON.stringify(answer) })
+        await rtcPeer.connection.setLocalDescription(answer);
+        webSocket.current.emit('make-answer', { from: webSocket.current.id, to: data.from, answer: JSON.stringify(answer) })
         rtcPeer.connection.onicecandidate = (e => {
             if (e && e.candidate)
-                ws.sendCandidate({
+                webSocket.current.emit('send-candidate', {
                     candidate: JSON.stringify(e.candidate),
+                    from: webSocket.current.id,
                     to: data.from
                 });
-            console.log(e.candidate);
         });
-        rtcPeerConnections.push(rtcPeer);
-        setRtcPeerConnections(rtcPeerConnections)
+        rtcPeerConnections.current.push(rtcPeer);
+        setUpdateState((value) => !value);
     }
 
     async function handleAnswer(data) {
-        rtcPeerConnections.map(async (rtc) => {
+        rtcPeerConnections.current.forEach(async (rtc) => {
             if (rtc.user === data.from) {
                 await rtc.connection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer)));
-                listCandidates.forEach(candidate => {
-                    ws.sendCandidate({
+                listCandidates.current.forEach(candidate => {
+                    webSocket.current.emit('send-candidate', {
                         candidate: JSON.stringify(candidate),
-                        from: ws.id(),
+                        from: webSocket.current.id,
                         to: data.from
                     });
                 });
@@ -122,26 +158,28 @@ function RoomPage(props) {
         });
     }
 
-    function renderVideos() {
-        return rtcPeerConnections.map((item, key) => {
-            if (item.connection) {
-                item.connection.ontrack = (({ streams: [stream] }) => {
-                    rtcPeerConnections[key].stream = stream
-                })
-                return (<Grid key={key} item xs={4} style={{ backgroundColor: '#000' }}>
-                    <RTCVideo mediaStream={rtcPeerConnections[key].stream} />
-                </Grid>);
-            }
+    let PartnersVideos;
+
+    if (rtcPeerConnections.current.length > 0) {
+        PartnersVideos = rtcPeerConnections.current.map((item, key) => {
+            return (<Grid key={key} item xs={4} style={{ backgroundColor: '#000' }}>
+                <RTCVideo mediaStream={handleGetStream(key)} />
+            </Grid>);
         })
     }
 
+    function handleGetStream(index) {
+        return rtcPeerConnections.current[index].stream;
+    }
+
     function handleIceCandidate(data) {
-        rtcPeerConnections.map(rtc => {
+        rtcPeerConnections.current.forEach(rtc => {
             if (rtc.user === data.from) {
-                if (rtc.localDescription && data.candidate) {
+                if (rtc.connection.localDescription && data.candidate) {
                     console.log(data);
                     var rtcCandidate = new RTCIceCandidate(JSON.parse(data.candidate));
-                    this.rtcPeerConnection.addIceCandidate(rtcCandidate).catch(e => console.error(e));
+                    rtc.connection.addIceCandidate(rtcCandidate).catch(e => console.error(e));
+                    setUpdateState((value) => !value);
                 }
             }
         });
@@ -152,10 +190,10 @@ function RoomPage(props) {
     return (
         <>
             <Grid container className={classes.mainGrid}>
-                {renderVideos()}
+                {PartnersVideos}
             </Grid>
             <div className={classes.myVideo}>
-                <RTCVideo mediaStream={localMediaStream} />
+                {UserVideo}
             </div>
         </>
     )

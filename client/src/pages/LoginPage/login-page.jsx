@@ -1,5 +1,5 @@
-import React from 'react';
-import { connect } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 
 import { userActions } from '../../actions';
 
@@ -20,78 +20,70 @@ import Container from '@material-ui/core/Container';
 function Copyright() {
     return (
         <Typography variant="body2" color="textSecondary" align="center">
-            {'Copyright © '}
-            <Link color="inherit" href="https://material-ui.com/">
-                Your Website
-      </Link>{' '}
+            {'Copyright © Hugo Leite'}
+            {' '}
             {new Date().getFullYear()}
             {'.'}
         </Typography>
     );
 }
 
-class LoginPage extends React.Component {
-    constructor(props) {
-        super(props);
+function LoginPage(props) {
+    const [inputs, setInputs] = useState({});
+    const [submited, setSubmited] = useState(false);
 
-        // reset login status
-        this.props.dispatch(userActions.logout());
+    const dispatch = useDispatch();
 
-        this.state = {
-            email: '',
-            password: '',
-            submitted: false,
-            emailInvalid: false
-        };
+    useEffect(() => {
+        dispatch(userActions.logout());
+    }, []);
 
-        this.handleChange = this.handleChange.bind(this);
-        this.handleSubmit = this.handleSubmit.bind(this);
-    }
-
-    handleChange(e) {
+    function handleChange(e) {
         const { name, value } = e.target;
-        this.setState({ [name]: value });
+        setInputs(inputs => ({ ...inputs, [name]: value }));
     }
 
-    handleSubmit(e) {
+    function handleSubmit(e) {
         e.preventDefault();
 
-        this.setState({ submitted: true, emailInvalid: false });
-        const { email, password } = this.state;
-        const { dispatch } = this.props;
+        setSubmited(true);
+        const { email, password } = inputs;
         if (email && !/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email)) {
-            this.setState({ emailInvalid: true })
+            setInputs({ ...inputs, emailInvalid: true })
         }
         if (email && password) {
-            dispatch(userActions.login(email, password, this.props.history));
+            dispatch(userActions.login(email, password, props.history));
         }
     }
 
-    render() {
-        const { email, password, submitted, emailInvalid } = this.state;
+    const { email, password, submitted, emailInvalid } = inputs;
 
-        const classes = makeStyles((theme) => ({
-            paper: {
-                marginTop: theme.spacing(8),
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-            },
-            avatar: {
-                margin: theme.spacing(1),
-                backgroundColor: theme.palette.secondary.main,
-            },
-            form: {
-                width: '100%', // Fix IE 11 issue.
-                marginTop: theme.spacing(1),
-            },
-            submit: {
-                margin: theme.spacing(3, 0, 2),
-            },
-        }));
+    const classes = makeStyles((theme) => ({
+        paper: {
+            marginTop: theme.spacing(8),
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+        },
+        avatar: {
+            margin: theme.spacing(1),
+            backgroundColor: theme.palette.secondary.main,
+        },
+        form: {
+            width: '100%', // Fix IE 11 issue.
+            marginTop: theme.spacing(1),
+        },
+        submit: {
+            margin: theme.spacing(3, 0, 2),
+        },
+    }));
 
-        return (
-            <Container component="main" maxWidth="xs">
+    return (
+        <div style={{
+            padding: '1px 0 0 0',
+            margin: '-1px auto 0 auto'
+        }}>
+            <Container component="div" maxWidth="xs" style={{ backgroundColor: '#fff', marginTop: '60px', padding: '24px' }}>
                 <CssBaseline />
                 <div className={classes.paper}>
                     <Avatar className={classes.avatar}>
@@ -100,7 +92,7 @@ class LoginPage extends React.Component {
                     <Typography component="h1" variant="h5">
                         Sign in
                     </Typography>
-                    <form className={classes.form} onSubmit={this.handleSubmit} noValidate>
+                    <form className={classes.form} onSubmit={handleSubmit} noValidate>
                         <TextField
                             error={(submitted && !email) || emailInvalid}
                             variant="outlined"
@@ -114,7 +106,7 @@ class LoginPage extends React.Component {
                             autoComplete="email"
                             autoFocus
                             helperText={emailInvalid ? 'Invalid' : null}
-                            onChange={this.handleChange} />
+                            onChange={handleChange} />
                         <TextField
                             error={submitted && !password}
                             variant="outlined"
@@ -126,7 +118,7 @@ class LoginPage extends React.Component {
                             type="password"
                             id="password"
                             autoComplete="current-password"
-                            onChange={this.handleChange} />
+                            onChange={handleChange} />
                         <FormControlLabel
                             control={<Checkbox value="remember" color="primary" />}
                             label="Remember me" />
@@ -156,9 +148,8 @@ class LoginPage extends React.Component {
                     <Copyright />
                 </Box>
             </Container>
-        );
-    }
+        </div>
+    );
 }
 
-const connectedLoginPage = connect()(LoginPage);
-export { connectedLoginPage as LoginPage };
+export { LoginPage };

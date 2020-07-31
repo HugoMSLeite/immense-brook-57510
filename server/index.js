@@ -9,8 +9,8 @@ let uuid = require('uuid');
 
 
 let twilio = require('twilio')(
-  'ACdf255335cf14e64751dfb64ac8fc9f1e',
-  '421357628985926aec97c7518345525a'
+  process.env.twilioId,
+  process.env.twilioToken
 );
 
 class Server {

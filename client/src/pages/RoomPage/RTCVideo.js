@@ -1,31 +1,24 @@
-import React, { PureComponent } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-class RTCVideo extends PureComponent {
-  constructor(props) {
-    super(props)
-  }
+function RTCVideo(props) {
+  const videoRef = useRef()
 
-  addMediaStream = (video) => {
-    const { mediaStream } = this.props;
-    // Prevents throwing error upon a setState change when mediaStream is null
-    // upon initial render
-    if (mediaStream) video.srcObject = mediaStream;
-  }
+  useEffect(() => {
+    console.log(videoRef, props.mediaStream)
+    if (videoRef && props.mediaStream) {
+      videoRef.current.srcObject = props.mediaStream;
+    }
+  }, [videoRef, props.mediaStream])
 
-  render() {
-    const { mediaStream } = this.props;
-    console.log('mediaStream: ', mediaStream);
-
-    return (
-      <video
-        style={{ width: '100%' }}
-        autoPlay
-        ref={mediaStream ? this.addMediaStream : null}
-      >
-        <track default kind="captions" />
-      </video>
-    );
-  }
+  return (
+    <video
+      style={{ width: '100%' }}
+      autoPlay
+      ref={videoRef}
+    >
+    </video>
+  );
 };
+
 
 export default RTCVideo;

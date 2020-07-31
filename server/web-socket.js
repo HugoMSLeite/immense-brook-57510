@@ -1,10 +1,10 @@
 let uuid = require('uuid')
 let twilio = require('twilio')(
     'ACdf255335cf14e64751dfb64ac8fc9f1e',
-    '421357628985926aec97c7518345525a'
+    '61134e1eb12b2814683a87ec29dd1005'
 )
 
-module.exports = function (socket, io, salas = []) {
+module.exports = function (socket, io, salas) {
     this.activeSockets = []
 
     const existingSocket = this.activeSockets.find(
@@ -31,15 +31,21 @@ module.exports = function (socket, io, salas = []) {
         this.activeSockets = this.activeSockets.filter(
             existingSocket => existingSocket !== socket.id
         );
+        salas.forEach(sala => {
+            if (sala.salaId === socket.salaId) {
+                var userIndex = sala.users.find(user => user === socket.id)
+                if (userIndex != -1)
+                    sala.users.splice(userIndex)
+                return;
+            }
+        })
     })
 
     socket.on('ice-services', () => {
-        console.log('ice-services')
         twilio.tokens.create(function (err, response) {
             if (err) {
                 console.log(err)
             } else {
-                console.log('emit ice')
                 socket.emit('ice-services', response)
             }
         })
@@ -54,9 +60,11 @@ module.exports = function (socket, io, salas = []) {
     })
 
     socket.on('enter-room', data => {
-        salas.map(item => {
-            if (item.salaId === data.salaId) {
+        salas.forEach(item => {
+            if (item.salaId === data) {
                 item.users.push(socket.id)
+                socket.emit('return-room', item)
+                socket.salaId = item.salaId
             }
         });
     })
@@ -65,12 +73,21 @@ module.exports = function (socket, io, salas = []) {
         socket.emit('update-list-rooms', salas)
     })
 
-    socket.on('get-room', data => {
-        salas.map(item => {
-            if (item.salaId === data) {
-                socket.emit('get-room', item)
-            }
-        });
+    socket.on('remove-room', data => {
+        let index = salas.findIndex(item => item.salaId === data)
+        if (index != -1)
+            salas.splice(index, 1)
+        io.emit('update-list-rooms', salas)
+    })
 
+    socket.on('leave-room', data => {
+        let index = salas.map(sala => {
+            if (sala.salaId === data) {
+                var userIndex = sala.users.find(user => user === socket.id)
+                if (userIndex != -1)
+                    sala.users.splice(userIndex)
+                return;
+            }
+        })
     })
 }
